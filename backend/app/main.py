@@ -5,12 +5,24 @@ from bs4 import BeautifulSoup
 from fastapi.middleware.cors import CORSMiddleware
 from readability import Document
 import logging
-from typing import List
+from typing import List, Optional
+from markdownify import MarkdownConverter
+import os, io, json
+import openai
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from fastapi.responses import StreamingResponse
+from .llm_provider import get_provider, OutlineError
+from pathlib import Path
+from .config import load_config
 
 app = FastAPI(title="Notāre Backend")
+cfg = load_config()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("notare.pptx")
+logger.setLevel(logging.INFO)
 
 # Add CORS middleware to allow frontend requests.
 app.add_middleware(
@@ -19,6 +31,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-chat-bison")
+openai.api_key = os.getenv("OPENAI_API_KEY", "")
 
 class NormalizeRequest(BaseModel):
     url: HttpUrl
@@ -55,9 +70,83 @@ class OutlineRequest(BaseModel):
     """Annotated HTML sent from the frontend to generate an outline."""
     html: str
 
+# Custom converter to mark <mark class="notare-mark">
+class MarkAwareConverter(MarkdownConverter):
+    def convert_mark(self, el, text, *args, **kwargs):
+        if 'notare-mark' in el.get('class', []):
+            return f"<<mark>>{text}<</mark>>"
+        return text
+
+def html_to_markdown(html: str) -> str:
+    conv = MarkAwareConverter(bullets='*')
+    return conv.convert(html)
+
 @app.post("/outline")
 async def outline(req: OutlineRequest):
-    """Extracts highlighted sentences (inside <mark.notare-mark>) and returns them as an outline list."""
-    soup = BeautifulSoup(req.html, "html.parser")
-    marks: List[str] = [m.get_text(" ", strip=True) for m in soup.select("mark.notare-mark")]
-    return {"outline": marks}
+    """Return markdown with custom highlight markers for LLM processing."""
+    markdown = html_to_markdown(req.html)
+    return {"markdown": markdown}
+
+class PPTXRequest(BaseModel):
+    html: str
+
+# Resolve template directory from config (no hard-coded fallback)
+raw_dir = cfg.get("template_dir")
+if raw_dir:
+    path_obj = Path(raw_dir).expanduser()
+    if not path_obj.is_absolute():
+        repo_root = Path(__file__).resolve().parents[2]
+        template_dir = (repo_root / path_obj).resolve()
+    else:
+        template_dir = path_obj
+    logger.info("Template directory resolved to %s", template_dir)
+else:
+    template_dir = None
+    logger.info("No template_dir configured; will build presentation from scratch")
+
+
+def load_template():
+    if not template_dir:
+        return None
+    for f in template_dir.glob("*.pptx"):
+        logger.info("Using PPTX template: %s", f)
+        return Presentation(str(f))
+    logger.info("No PPTX template found in %s; using default presentation", template_dir)
+    return None
+
+@app.post("/pptx")
+async def generate_pptx(req: PPTXRequest):
+    """Generate a PPTX from annotated HTML via LLM outline."""
+    provider = get_provider()
+
+    markdown = html_to_markdown(req.html)
+
+    try:
+        outline = await provider.generate_outline(markdown)
+    except OutlineError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Build PPTX
+    prs = load_template() or Presentation()
+    title_slide_layout = prs.slide_layouts[0]
+    bullet_slide_layout = prs.slide_layouts[1]
+
+    for idx, slide in enumerate(outline.get("slides", [])):
+        layout = title_slide_layout if idx == 0 else bullet_slide_layout
+        s = prs.slides.add_slide(layout)
+        title = s.shapes.title
+        title.text = slide.get("title", "")
+        if layout == bullet_slide_layout:
+            body = s.shapes.placeholders[1].text_frame
+            body.clear()
+            for bullet in slide.get("bullets", []):
+                p = body.add_paragraph()
+                p.text = bullet
+                p.level = 0
+                p.font.size = Pt(18)
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", headers={"Content-Disposition": "attachment; filename=outline.pptx"})

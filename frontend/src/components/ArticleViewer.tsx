@@ -1,19 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
 interface Props {
   html: string;
 }
 
-export default function ArticleViewer({ html }: Props) {
-  const ref = useRef<HTMLElement>(null);
+export default forwardRef(function ArticleViewer({ html }: Props, outRef) {
+  const localRef = useRef<HTMLElement>(null);
+  useImperativeHandle(outRef, () => localRef.current as HTMLElement | null);
 
   // Wrap each word in span.word on render
   useEffect(() => {
-    if (!ref.current) return;
-    ref.current.innerHTML = html;
+    if (!localRef.current) return;
+    localRef.current.innerHTML = html;
 
     // Walk text nodes and wrap words
-    const walker = document.createTreeWalker(ref.current, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(localRef.current, NodeFilter.SHOW_TEXT);
     const textNodes: Text[] = [];
     while (walker.nextNode()) {
       const tn = walker.currentNode as Text;
@@ -37,8 +38,8 @@ export default function ArticleViewer({ html }: Props) {
       tn.replaceWith(frag);
     });
     // Debug: list paragraphs without wrapped words (e.g., inside blockquotes)
-    console.log('Unwrapped paragraphs', ref.current.querySelectorAll('p:not(:has(span.word))'));
-    console.log('words wrapped:', ref.current!.querySelectorAll('span.word').length);
+    console.log('Unwrapped paragraphs', localRef.current.querySelectorAll('p:not(:has(span.word))'));
+    console.log('words wrapped:', localRef.current!.querySelectorAll('span.word').length);
   }, [html]);
 
   // Click to highlight whole sentence
@@ -102,9 +103,9 @@ export default function ArticleViewer({ html }: Props) {
   if (!html) return null;
   return (
     <article
-      ref={ref}
+      ref={localRef}
       onClick={onClick}
       className="prose lg:prose-lg bg-white p-6 rounded shadow max-w-3xl cursor-pointer select-none"
     />
   );
-}
+});

@@ -12,3 +12,7 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Ignore project config file
+backend/config.toml
+backend/templates/
