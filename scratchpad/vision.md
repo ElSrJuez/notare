@@ -64,6 +64,31 @@
   - Animation tapers off for fluidity, no mechanical feel.  
   - No hard borders; faint glow or gradient signals focus.  
 
+- **Layout considerations**:  
+  - Increase `line-height` to ~1.6–1.8 so the scale-up doesn’t push neighbouring lines downward.  
+  - Reserve ~`8ch` of right-side padding/margin so enlarged words don’t wrap or overflow.  
+- **Implementation notes**:  
+  - Apply `transform: scale()` to inline `<span>` wrappers; keep the parent container `overflow: hidden`.  
+  - Render highlight backgrounds with a lower-`z` pseudo-element so edges stay crisp when the word grows.
+
+- **Animation mechanics**:  
+  - On `mouseenter`, apply `transform: scale(1.12)` to the span wrapping the word(s) with `transition: transform 180ms cubic-bezier(0.22,1,0.36,1)`.  
+  - Use `transform-origin: center bottom` so growth radiates outward without shifting the baseline.  
+  - On `mouseleave`, return to scale `1` with a slightly longer ease-out (~240 ms) for smoothness.  
+  - Example (Framer Motion):  
+    ```tsx
+    <motion.span
+      whileHover={{ scale: 1.12 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+    >
+      {word}
+    </motion.span>
+    ```  
+- **Underlying text objects**:  
+  - Render each word/phrase as an inline `<span>` so scaling affects only that element’s transform layer—layout flow stays intact.  
+  - Keep highlight backgrounds on a lower-`z` pseudo-element (`::before`) so edges remain crisp when text grows.  
+  - When a highlight is “locked,” persist a `<mark>` tag or CSS class and disable the transform (or swap to a gentle glow).
+
 ### Click → Phrase Recognition
 - Detect the **full phrase/sentence** (via punctuation boundaries or NLP).  
 - Apply highlight:  
@@ -131,3 +156,4 @@ You are a presentation assistant.
 Using the provided highlights and template, generate a PowerPoint outline. 
 Template: [Outline Template Here]
 Highlights: [User’s highlighted content]
+```
