@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from fastapi.middleware.cors import CORSMiddleware
 from readability import Document
 import logging
+from typing import List
 
 app = FastAPI(title="Notāre Backend")
 
@@ -49,3 +50,14 @@ async def normalize_page(req: NormalizeRequest):
     clean_html = str(soup)
 
     return {"clean_html": clean_html}
+
+class OutlineRequest(BaseModel):
+    """Annotated HTML sent from the frontend to generate an outline."""
+    html: str
+
+@app.post("/outline")
+async def outline(req: OutlineRequest):
+    """Extracts highlighted sentences (inside <mark.notare-mark>) and returns them as an outline list."""
+    soup = BeautifulSoup(req.html, "html.parser")
+    marks: List[str] = [m.get_text(" ", strip=True) for m in soup.select("mark.notare-mark")]
+    return {"outline": marks}

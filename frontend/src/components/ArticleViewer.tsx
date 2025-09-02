@@ -44,11 +44,35 @@ export default function ArticleViewer({ html }: Props) {
   // Click to highlight whole sentence
   function onClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
-    if (!target.classList.contains('word')) return;
-    const para = target.closest('p, li, blockquote, h1, h2, h3') as HTMLElement;
+    // If clicked inside a link, only navigate on Ctrl/Cmd-click
+    const anchor = target.closest('a');
+    if (anchor) {
+      if (!(e.ctrlKey || e.metaKey)) {
+        // Disable navigation so we can still highlight
+        e.preventDefault();
+      } else {
+        // Ctrl/Meta-click should follow the link – no highlighting
+        return;
+      }
+    }
+
+    // Ensure we are working with the <span class="word"> element even if a parent was clicked
+    const word = target.closest('span.word') as HTMLElement | null;
+    if (!word) return;
+
+    // Toggle: if this word is already inside a mark, remove the highlight
+    const existing = word.closest('mark.notare-mark') as HTMLElement | null;
+    if (existing) {
+      const parent = existing.parentNode!;
+      while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+      existing.remove();
+      return;
+    }
+
+    const para = word.closest('p, li, blockquote, h1, h2, h3') as HTMLElement;
     if (!para) return;
-    const words = Array.from(para.querySelectorAll('span.word')).filter(w=>w.textContent?.trim()) as HTMLElement[];
-    const idx = words.indexOf(target);
+    const words = Array.from(para.querySelectorAll('span.word')).filter(w => w.textContent?.trim()) as HTMLElement[];
+    const idx = words.indexOf(word);
     if (idx === -1) return;
     console.log('Clicked word', target.textContent, 'index', idx);
     const punct = /[.!?]/;

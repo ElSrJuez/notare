@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  a {
+    @apply underline font-normal text-blue-600 hover:text-blue-800;
+  }
+}
+
 @layer components {
   mark.notare-mark {
     @apply inline bg-transparent;
