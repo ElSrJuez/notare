@@ -15,7 +15,7 @@ Thumbs.db
 
 # Ignore project config file
 backend/config.toml
-backend/templates/
 
 # PPT Templates
-assets/ppt_templates/
+assets/ppt_templates/*
+!assets/ppt_templates/.gitkeep
