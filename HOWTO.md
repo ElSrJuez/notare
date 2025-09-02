@@ -25,23 +25,29 @@ Server runs at http://localhost:8000
 
 ---
 
-## 4. Launch placeholder GUI
-Option A – VS Code Live Server:
-1. Open `frontend/index.html` in VS Code.
-2. Use the “Open with Live Server” extension.
-
-Option B – Python static server:
+## 4. Launch front-end (Vite dev server)
 ```pwsh
-python -m http.server 5500 --directory frontend
+cd frontend
+npm install       # first time only
+npm run dev
 ```
-Open http://localhost:5500/index.html in your browser.
+This starts React at http://localhost:5173 and proxies API calls to FastAPI.
 
 ---
 
 ## 5. Test normalization
-1. Paste a public article URL into the text box.
-2. Click “Normalize.”
-3. The cleaned text appears in the page, confirming backend → frontend flow.
+1. Open http://localhost:5173 in your browser.
+2. Paste a public article URL into the input.
+3. Click “Normalize.”
+4. The cleaned article appears with preserved headings.
+
+---
+
+## 6. Optional: Production build
+```pwsh
+npm run build     # outputs static files to frontend/dist
+```
+Copy `dist/` to a `static/` folder and mount with FastAPI for single-origin deployment.
 
 ---
 

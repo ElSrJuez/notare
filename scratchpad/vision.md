@@ -96,6 +96,7 @@
   - Rounded rectangle effect.  
   - Optional subtle underline.  
 - Highlights stay **aesthetic, not neon**.  
+- Marked phrases remain **inline** within the article (`<mark>` wrappers); we do not extract them to a separate list at this stage. The annotated HTML is later passed to the LLM so it can emphasize marked regions when generating the outline.
 
 ### Interaction Flow
 1. **Hover** → wave magnify effect.  
@@ -157,3 +158,9 @@ Using the provided highlights and template, generate a PowerPoint outline.
 Template: [Outline Template Here]
 Highlights: [User’s highlighted content]
 ```
+
+### Status Snapshot (Sept 2025)
+- ✅ Backend normalization endpoint live (Readability-based)
+- ✅ Vite + React front-end renders cleaned article
+- 🔄 Tailwind Typography enabled for proper document hierarchy
+- ⏳ Next: build interactive highlighter & magnifier; wire highlight storage
