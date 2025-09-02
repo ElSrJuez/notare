@@ -15,12 +15,13 @@ A numbered, incremental checklist to track our progress and completion status.
 7. [x] Develop backend extraction and normalization service (Readability + CORS)
 8. [ ] Create LLM abstraction layer (BYOM)
 9. [ ] Implement highlight-to-outline LLM workflow
-10. [ ] Export PowerPoint (.pptx) from backend/frontend
-11. [ ] Add configuration UI for model selection
-12. [x] Write onboarding and technical documentation (README, HOWTO)
-13. [ ] Set up automated tests and CI/CD
-14. [ ] Review, refactor, and polish for maintainability
-15. [ ] Bundle frontend static build into FastAPI for single-origin deployment
+10. [x] Export PowerPoint (.pptx) from backend/frontend
+11. [ ] Ensure LLM emphasises user highlights when generating outline
+12. [ ] Add configuration UI for model selection
+13. [x] Write onboarding and technical documentation (README, HOWTO)
+14. [ ] Set up automated tests and CI/CD
+15. [ ] Review, refactor, and polish for maintainability
+16. [ ] Bundle frontend static build into FastAPI for single-origin deployment
 
 ---
 
