@@ -19,4 +19,34 @@ Frontend (React + Tailwind + Framer Motion) renders the document viewer and inte
 ## Development Principles
 Simplicity and Maintainability guide every module. We practice small-module Separation of Concerns, DRY, and leverage existing libraries rather than reinventing the wheel.
 
-See `scratchpad/vision.md` for full design notes and `scratchpad/planning.md` for progress tracking.
+[➡️ Quick HOW-TO »](./HOWTO.md)
+
+---
+
+## Design Principles
+- **Clarity over clutter** – interface fades so the document stays central.
+- **Beautiful minimalism** – clean typography, restrained colours, generous whitespace.
+- **Respect structure** – preserve heading hierarchy during normalization.
+- **Fluid interaction** – highlighting and magnification feel organic and smooth.
+- **BYOM friendly** – Large-Language-Model integration sits behind a clean abstraction layer.
+
+## Architecture at a Glance
+| Layer      | Stack                         | Notes                                   |
+|------------|------------------------------|-----------------------------------------|
+| Frontend   | React + Vite + Tailwind CSS  | Reader, highlighter, export trigger     |
+| Animation  | Framer Motion                | Hover magnifier & highlight effects     |
+| Backend    | FastAPI (Python)             | Extraction, LLM calls, PPTX generation  |
+| LLM        | OpenAI / Azure / Llama.cpp   | Configure in `backend/app/config.toml`  |
+| Slides     | python-pptx                  | Uses optional template + layout mapping |
+
+---
+
+## Workflow
+1. **Normalize** – Fetch article, strip boilerplate, render clean reading mode.
+2. **Highlight** – Hover magnify, click to mark key phrases (`<<mark>>`).
+3. **Outline** – Backend passes annotated markdown to your LLM, which returns JSON.
+4. **Export** – JSON outline → python-pptx, applied to your template → download.
+
+---
+
+For full setup instructions and troubleshooting see **[HOWTO.md](./HOWTO.md)**.
