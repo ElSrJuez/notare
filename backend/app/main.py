@@ -3,6 +3,7 @@ from pydantic import BaseModel, HttpUrl
 import httpx
 from bs4 import BeautifulSoup
 from fastapi.middleware.cors import CORSMiddleware
+from readability import Document
 
 app = FastAPI(title="Notāre Backend")
 
@@ -27,14 +28,14 @@ async def normalize_page(req: NormalizeRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    soup = BeautifulSoup(resp.text, "html.parser")
+    doc = Document(resp.text, url=str(req.url))
+    summary_html = doc.summary(html_partial=True)
 
-    # Remove unwanted tags
-    for tag in soup(["script", "style", "nav", "footer", "aside", "header", "form" ]):
+    # Further strip unwanted tags but keep structure
+    soup = BeautifulSoup(summary_html, "html.parser")
+    for tag in soup(["script", "style", "form"]):
         tag.decompose()
 
-    # Keep structural elements
-    body = soup.body or soup
-    content = "\n".join(p.get_text(separator=" ", strip=True) for p in body.find_all(["h1","h2","h3","p","li"]))
+    clean_html = str(soup)
 
-    return {"clean_text": content}
+    return {"clean_html": clean_html}

@@ -28,7 +28,7 @@
         });
         if(!res.ok){ alert('Error'); return; }
         const data = await res.json();
-        document.getElementById('content').textContent = data.clean_text;
+        document.getElementById('content').innerHTML = data.clean_html;
       }
     </script>
   </body>
