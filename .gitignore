@@ -17,5 +17,8 @@ Thumbs.db
 backend/config.toml
 
 # PPT Templates
-assets/ppt_templates/*
+# Ignore binary template files but keep helper & mapping
+assets/ppt_templates/*.pptx
+assets/ppt_templates/*.json
+!assets/ppt_templates/layout_helper.py
 !assets/ppt_templates/.gitkeep
