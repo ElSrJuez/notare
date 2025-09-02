@@ -4,8 +4,12 @@ import httpx
 from bs4 import BeautifulSoup
 from fastapi.middleware.cors import CORSMiddleware
 from readability import Document
+import logging
 
 app = FastAPI(title="Notāre Backend")
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Add CORS middleware to allow frontend requests.
 app.add_middleware(
@@ -35,6 +39,12 @@ async def normalize_page(req: NormalizeRequest):
     soup = BeautifulSoup(summary_html, "html.parser")
     for tag in soup(["script", "style", "form"]):
         tag.decompose()
+
+    # Debug: log remaining blockquotes or <br> that could break highlighting
+    for bq in soup.find_all("blockquote"):
+        logging.info("BLOCKQUOTE remaining: %s", bq.get_text(strip=True)[:120])
+    if soup.find("br"):
+        logging.info("<br> tags remain in document – may split sentences")
 
     clean_html = str(soup)
 

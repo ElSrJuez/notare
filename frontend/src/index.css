@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  mark.notare-mark {
+    @apply inline bg-transparent;
+    /* yellow bar that spans spaces */
+    box-shadow: inset 0 -0.55em 0 rgba(250 204 21 / 0.6);
+  }
+}
+
+@layer utilities {
+  .word {
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+  .word:hover {
+    transform: scale(1.12);
+  }
+}
