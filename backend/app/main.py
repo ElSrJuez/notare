@@ -90,8 +90,8 @@ async def outline(req: OutlineRequest):
 class PPTXRequest(BaseModel):
     html: str
 
-# Resolve template directory from config (no hard-coded fallback)
-raw_dir = cfg.get("template_dir")
+# Resolve template directory (checks root, [llm], [llm.openai])
+raw_dir = cfg.get("template_dir") or cfg.get("llm", {}).get("template_dir") or cfg.get("llm", {}).get("openai", {}).get("template_dir")
 if raw_dir:
     path_obj = Path(raw_dir).expanduser()
     if not path_obj.is_absolute():
@@ -114,6 +114,29 @@ def load_template():
     logger.info("No PPTX template found in %s; using default presentation", template_dir)
     return None
 
+layout_map = {}
+if template_dir:
+    map_file = template_dir / "layout_map.json"
+    if map_file.exists():
+        layout_map = json.loads(map_file.read_text())
+        logger.info("Loaded layout map with %d entries", len(layout_map))
+
+
+def get_layout_by_default(prs, default_name, need_body):
+    # mapped name first
+    mapped = layout_map.get(default_name)
+    if mapped:
+        for l in prs.slide_layouts:
+            if l.name == mapped:
+                return l
+    # fallback search
+    for l in prs.slide_layouts:
+        if default_name.lower() in l.name.lower():
+            return l
+    # ultimate fallback
+    return prs.slide_layouts[0]
+
+
 @app.post("/pptx")
 async def generate_pptx(req: PPTXRequest):
     """Generate a PPTX from annotated HTML via LLM outline."""
@@ -128,19 +151,31 @@ async def generate_pptx(req: PPTXRequest):
 
     # Build PPTX
     prs = load_template() or Presentation()
-    title_slide_layout = prs.slide_layouts[0]
-    bullet_slide_layout = prs.slide_layouts[1]
 
-    for idx, slide in enumerate(outline.get("slides", [])):
-        layout = title_slide_layout if idx == 0 else bullet_slide_layout
+    title_layout = get_layout_by_default(prs, "Title Slide", need_body=False)
+    content_layout = get_layout_by_default(prs, "Title and Content", need_body=True)
+
+    for idx, slide_data in enumerate(outline.get("slides", [])):
+        layout = title_layout if idx == 0 else content_layout
         s = prs.slides.add_slide(layout)
-        title = s.shapes.title
-        title.text = slide.get("title", "")
-        if layout == bullet_slide_layout:
-            body = s.shapes.placeholders[1].text_frame
-            body.clear()
-            for bullet in slide.get("bullets", []):
-                p = body.add_paragraph()
+
+        # Title
+        title_shape = s.shapes.title
+        if title_shape:
+            title_shape.text = slide_data.get("title", "")
+        else:  # fallback create title textbox
+            s.shapes.add_textbox(Inches(1), Inches(0.5), Inches(8), Inches(1)).text_frame.text = slide_data.get("title", "")
+
+        # Bullets
+        if idx != 0:
+            body_ph = next((ph for ph in s.placeholders if ph.placeholder_format.type == 2), None)
+            if body_ph:
+                tf = body_ph.text_frame
+            else:
+                tf = s.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(5)).text_frame
+            tf.clear()
+            for bullet in slide_data.get("bullets", []):
+                p = tf.add_paragraph()
                 p.text = bullet
                 p.level = 0
                 p.font.size = Pt(18)
