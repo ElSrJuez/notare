@@ -161,11 +161,9 @@ class SettingsPayload(BaseModel):
 async def healthz():
     return {"ok": True}
 
-@app.get("/")
-async def root():
-    index_path = _frontend_path / "index.html" if ' _frontend_path' in globals() else None
-    if index_path and index_path.exists():
-        return FileResponse(index_path)
+# Fallback status endpoint (distinct path to avoid masking GUI)
+@app.get("/__status")
+async def status():
     return {"ok": True}
 
 @app.post("/pptx")
