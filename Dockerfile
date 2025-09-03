@@ -5,6 +5,8 @@ COPY frontend/package.json frontend/package-lock.json ./
 # Install all deps (need devDeps for Vite build)
 RUN npm ci
 COPY frontend/ .
+# Include shared assets referenced by frontend
+COPY assets ./assets
 RUN npm run build
 
 # ---- Base image ----
