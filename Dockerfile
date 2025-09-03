@@ -2,7 +2,8 @@
 FROM node:20 AS ui-build
 WORKDIR /ui
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --omit=dev
+# Install all deps (need devDeps for Vite build)
+RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
