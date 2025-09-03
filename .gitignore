@@ -22,3 +22,6 @@ assets/ppt_templates/*.pptx
 assets/ppt_templates/*.json
 !assets/ppt_templates/layout_helper.py
 !assets/ppt_templates/.gitkeep
+
+# Deployment
+deployment.ini
