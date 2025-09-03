@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export interface Settings {
   provider: 'openai' | 'azure' | 'llama';
@@ -119,9 +119,7 @@ export default function SettingsPanel({ initial, onSave, onClose }: Props) {
           onChange={e => handleFileChange(e, 'template')}
           className="mb-1 w-full"
         />
-        {settings.templateName && (
-          <div className="text-sm font-medium text-green-700 mb-3">✔ {settings.templateName}</div>
-        )}
+        {settings.template && <div className="text-sm font-medium text-green-700 mb-3">✔ {settings.template.name}</div>}
 
         {/* layout */}
         <label className="text-sm font-medium">Layout map (.json)</label>
@@ -131,8 +129,8 @@ export default function SettingsPanel({ initial, onSave, onClose }: Props) {
           onChange={e => handleFileChange(e, 'layoutMap')}
           className="mb-1 w-full"
         />
-        {settings.layoutName && (
-          <div className="text-sm font-medium text-green-700 mb-3">✔ {settings.layoutName}</div>
+        {settings.layoutMap && (
+          <div className="text-sm font-medium text-green-700 mb-3">✔ {settings.layoutMap.name}</div>
         )}
 
         {/* remember */}
