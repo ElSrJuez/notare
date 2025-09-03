@@ -1,3 +1,11 @@
+# Build frontend
+FROM node:20 AS ui-build
+WORKDIR /ui
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --omit=dev
+COPY frontend/ .
+RUN npm run build
+
 # ---- Base image ----
 FROM python:3.13-slim AS base
 
@@ -20,6 +28,8 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # ---- Copy source ----
 COPY backend ./backend
 COPY assets ./assets
+# Copy built frontend
+COPY --from=ui-build /ui/dist ./frontend/dist
 
 # ---- Runtime ----
 EXPOSE 8080

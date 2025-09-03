@@ -16,6 +16,8 @@ from .llm_provider import OpenAIProvider, LlamaHTTPProvider, BaseProvider, Outli
 from pathlib import Path
 from .config import load_config
 import tempfile  # added
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path as _Path
 
 app = FastAPI(title="Notāre Backend")
 cfg = load_config()
@@ -159,6 +161,10 @@ class SettingsPayload(BaseModel):
 async def healthz():
     return {"ok": True}
 
+@app.get("/")
+async def root():
+    return {"ok": True}
+
 @app.post("/pptx")
 async def generate_pptx(
     settings: Annotated[str, Form(...)],
@@ -256,3 +262,8 @@ async def generate_pptx(
         except Exception:
             pass
     return response
+
+# Mount frontend build (if present) as static site
+_frontend_path = _Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if _frontend_path.exists():
+    app.mount("/", StaticFiles(directory=str(_frontend_path), html=True), name="frontend")

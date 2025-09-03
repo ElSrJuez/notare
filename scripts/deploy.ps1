@@ -62,11 +62,19 @@ if ($activeProj -ne $project) {
     if ($projAns -in @('y','Y')) { & gcloud config set project $project | Out-Null } else { Write-Host "Cancelled."; return }
 }
 
-# After status reconciliation, ask final confirmation
-Write-Host "\nDeployment configuration:" -ForegroundColor Yellow
-$cfg.GetEnumerator() | ForEach-Object { Write-Host "  $($_.Key) = $($_.Value)" }
+# Calculate repo root and gcloudArgs early
+$repoRoot  = Resolve-Path (Join-Path $scriptDir '..')
+$sizeMB    = [Math]::Round(((Get-ChildItem -Recurse -Force -EA SilentlyContinue $repoRoot | Measure-Object Length -Sum).Sum / 1MB),1)
 
-$answer = Read-Host "\nReady to deploy '$service' to '$region' project '$project'. Proceed? (y/N)"
+$gcloudArgs = @('run','deploy',$service,'--source',$repoRoot,'--region',$region,'--project',$project,'--memory',$memory,'--cpu',$cpu)
+if ($port)   { $gcloudArgs += @('--port',$port) }
+if ($unauth -eq 'true') { $gcloudArgs += '--allow-unauthenticated' }
+
+Write-Host "\nSource directory : $repoRoot" -ForegroundColor Cyan
+Write-Host "Approx upload size : $sizeMB MB" -ForegroundColor Cyan
+Write-Host "gcloud command    : gcloud $($gcloudArgs -join ' ')" -ForegroundColor Yellow
+
+$answer = Read-Host "\nProceed with deployment? (y/N)"
 if ($answer -notin @('y','Y')) { Write-Host "Deployment cancelled."; return }
 
 # Public unauth confirm
@@ -78,8 +86,19 @@ if ($cfg['ALLOW_UNAUTH'] -eq 'true') {
 $port    = $cfg['PORT']
 $unauth  = $cfg['ALLOW_UNAUTH']
 
-$gcloudArgs = @('run','deploy',$service,'--source','..','--region',$region,'--project',$project,'--memory',$memory,'--cpu',$cpu)
+# Determine repo root (parent of script dir)
+$repoRoot = Resolve-Path (Join-Path $scriptDir '..')
+Write-Host "Source directory resolved to $repoRoot" -ForegroundColor Green
+Write-Host "Using source directory: $repoRoot" -ForegroundColor Cyan
+$size = (Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue $repoRoot | Measure-Object -Property Length -Sum).Sum / 1MB
+Write-Host ("Approx upload size: {0:N1} MB" -f $size) -ForegroundColor Cyan
+
+$gcloudArgs = @('run','deploy',$service,'--source',$repoRoot,'--region',$region,'--project',$project,'--memory',$memory,'--cpu',$cpu)
 if ($port)   { $gcloudArgs += @('--port',$port) }
 if ($unauth -eq 'true') { $gcloudArgs += '--allow-unauthenticated' }
+
+Write-Host "\nRunning gcloud command:" -ForegroundColor Yellow
+Write-Host "gcloud $($gcloudArgs -join ' ')" -ForegroundColor Yellow
+Write-Host "\n=== Uploading sources → Build → Deploy ===" -ForegroundColor Green
 
 & gcloud @gcloudArgs

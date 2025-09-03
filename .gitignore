@@ -25,3 +25,6 @@ assets/ppt_templates/*.json
 
 # Deployment
 deployment.ini
+
+# Frontend build artifacts
+frontend/dist/
