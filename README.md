@@ -19,7 +19,7 @@ Frontend (React + Tailwind + Framer Motion) renders the document viewer and inte
 ## Development Principles
 Simplicity and Maintainability guide every module. We practice small-module Separation of Concerns, DRY, and leverage existing libraries rather than reinventing the wheel.
 
-[➡️ Quick HOW-TO »](./HOWTO.md)
+[➡️ Quick HOW-TO »](./HOWTO.md) | [📋 TODO & Roadmap »](./TODO.md)
 
 ---
 
@@ -46,7 +46,3 @@ Simplicity and Maintainability guide every module. We practice small-module Sepa
 2. **Highlight** – Hover magnify, click to mark key phrases (`<<mark>>`).
 3. **Outline** – Backend passes annotated markdown to your LLM, which returns JSON.
 4. **Export** – JSON outline → python-pptx, applied to your template → download.
-
----
-
-For full setup instructions and troubleshooting see **[HOWTO.md](./HOWTO.md)**.

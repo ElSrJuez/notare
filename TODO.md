@@ -23,3 +23,8 @@
 - Dark-mode theme support.
 - Unit tests for React components and FastAPI routes.
 - Accessibility audit: ensure proper ARIA roles and color contrast.
+- Implement user-moderation prompt that merges outline with source context before final generation.
+- Allow users to upload, manage, and normalize custom PPT templates via UI & backend endpoint.
+- Treat highlighted ‘central’ sentences/phrases as slide section dividers with auto numbering based on mapped layout.
+- Implement local/session-based storage for templates, outlines, and user profiles; backend remains stateless.
+- Build UI for users to configure their LLM credentials and settings (BYOM) and persist them locally.

@@ -164,3 +164,10 @@ Highlights: [User’s highlighted content]
 - ✅ Vite + React front-end renders cleaned article
 - 🔄 Tailwind Typography enabled for proper document hierarchy
 - ⏳ Next: build interactive highlighter & magnifier; wire highlight storage
+
+---
+
+### Local, Session-Based Storage
+- **User-Centric** → All templates, outlines, and settings are stored **locally in the user’s browser** (IndexedDB / LocalStorage) or as downloadable files.
+- **Stateless Backend** → The server keeps **no persistent user data**; each request is self-contained. Eliminates leaks and reduces security surface.
+- **Profiles** → Users can export/import configuration bundles (LLM credentials, template maps) to move between devices without cloud accounts.
