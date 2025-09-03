@@ -13,13 +13,22 @@ export default function UrlInput({ onLoaded }: Props) {
     if (!url) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/normalize', {
+      console.log('[Normalize] POST /normalize', url);
+      const res = await fetch('/normalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
+      console.log('[Normalize] Response status', res.status);
+      if (!res.ok) {
+        console.error('[Normalize] Error response', await res.text());
+        return;
+      }
       const data = await res.json();
+      console.log('[Normalize] clean_html length', data.clean_html?.length);
       onLoaded(data.clean_html);
+    } catch (err) {
+      console.error('[Normalize] Network/error', err);
     } finally {
       setLoading(false);
     }

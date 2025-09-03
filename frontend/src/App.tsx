@@ -27,17 +27,22 @@ function App() {
     setLoading(true);
     try {
       const annotatedHtml = viewerRef.current.outerHTML;
+      console.log('[PPTX] Sending annotated HTML length', annotatedHtml.length);
       const fd = new FormData();
       fd.append('settings', JSON.stringify({ provider: settings.provider, api_key: settings.api_key, model: settings.model, endpoint: settings.endpoint, api_version: settings.api_version }));
       if (settings.template) fd.append('template', settings.template);
       if (settings.layoutMap) fd.append('layout_map', settings.layoutMap);
       fd.append('html', annotatedHtml);
 
-      const res = await fetch('/api/pptx', {
+      const res = await fetch('/pptx', {
         method: 'POST',
         body: fd,
       });
-      if (!res.ok) throw new Error(await res.text());
+      console.log('[PPTX] Response status', res.status);
+      if (!res.ok) {
+        console.error('[PPTX] Error response', await res.text());
+        throw new Error('PPTX generation failed');
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

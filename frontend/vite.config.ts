@@ -5,11 +5,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api/, '')
-      }
-    }
-  }
-});
+      '/normalize': 'http://localhost:8000',
+      '/outline':   'http://localhost:8000',
+      '/pptx':      'http://localhost:8000'
+     }
+   }
+ });
