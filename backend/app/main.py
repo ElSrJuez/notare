@@ -1,20 +1,21 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
 from pydantic import BaseModel, HttpUrl
 import httpx
 from bs4 import BeautifulSoup
 from fastapi.middleware.cors import CORSMiddleware
 from readability import Document
 import logging
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from markdownify import MarkdownConverter
 import os, io, json
 import openai
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from fastapi.responses import StreamingResponse
-from .llm_provider import get_provider, OutlineError
+from .llm_provider import OpenAIProvider, LlamaHTTPProvider, BaseProvider, OutlineError
 from pathlib import Path
 from .config import load_config
+import tempfile  # added
 
 app = FastAPI(title="Notāre Backend")
 cfg = load_config()
@@ -31,9 +32,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-chat-bison")
-openai.api_key = os.getenv("OPENAI_API_KEY", "")
 
 class NormalizeRequest(BaseModel):
     url: HttpUrl
@@ -137,23 +135,89 @@ def get_layout_by_default(prs, default_name, need_body):
     return prs.slide_layouts[0]
 
 
-@app.post("/pptx")
-async def generate_pptx(req: PPTXRequest):
-    """Generate a PPTX from annotated HTML via LLM outline."""
-    provider = get_provider()
+class SettingsPayload(BaseModel):
+    provider: str = "openai"
+    api_key: str | None = None
+    model: Optional[str] = None
+    endpoint: Optional[str] = None
+    api_version: Optional[str] = None
 
-    markdown = html_to_markdown(req.html)
+    def build_provider(self) -> BaseProvider:
+        name = self.provider.lower()
+        if name in ("openai", "azure"):
+            if not self.api_key and name != "llama":
+                raise HTTPException(status_code=400, detail="api_key required for OpenAI/Azure provider")
+            if name == "azure" and not self.endpoint:
+                raise HTTPException(status_code=400, detail="endpoint required for Azure provider")
+            return OpenAIProvider({"api_key": self.api_key, "model": self.model or "gpt-4o-chat-bison", "endpoint": self.endpoint, "api_version": self.api_version})
+        if name == "llama":
+            return LlamaHTTPProvider(base_url=self.endpoint or "http://localhost:8080/completions", model=self.model)
+        raise HTTPException(status_code=400, detail=f"Unsupported provider '{self.provider}'")
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"ok": True}
+
+@app.post("/pptx")
+async def generate_pptx(
+    settings: Annotated[str, Form(...)],
+    html: Annotated[str, Form(..., description="Annotated HTML from client")],
+    template: Annotated[UploadFile | None, File(description="Optional PPTX template", alias="template")] = None,
+    layout_map_file: Annotated[UploadFile | None, File(description="Optional JSON layout map", alias="layout_map")] = None,
+):
+    """Generate a PPTX from annotated HTML via LLM outline.
+
+    Expects multipart/form-data with:
+        settings: JSON string with provider/api_key/model (required)
+        template: .pptx file ≤5 MiB (optional)
+        layout_map: .json mapping file (optional)
+        html: annotated article HTML (required)
+    """
+
+    try:
+        settings_obj = SettingsPayload.model_validate_json(settings)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid settings JSON: {e}")
+
+    if template and template.size and template.size > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Template too large (limit 5 MiB)")
+
+    provider = settings_obj.build_provider()
+
+    markdown = html_to_markdown(html)
 
     try:
         outline = await provider.generate_outline(markdown)
     except OutlineError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    # Build PPTX
-    prs = load_template() or Presentation()
+    # Load template: uploaded > configured dir > default blank.
+    prs_template = None
+    cleanup_files = []
+    if template is not None:
+        tmp_path = Path(tempfile.gettempdir()) / f"notare_{template.filename}"
+        with tmp_path.open("wb") as f:
+            f.write(await template.read())
+        prs_template = Presentation(str(tmp_path))
+        cleanup_files.append(tmp_path)
+    else:
+        prs_template = load_template()
 
-    title_layout = get_layout_by_default(prs, "Title Slide", need_body=False)
-    content_layout = get_layout_by_default(prs, "Title and Content", need_body=True)
+    prs = prs_template or Presentation()
+
+    # If a custom layout_map was supplied use it; else fall back to configured one.
+    local_layout_map: dict = {}
+    if layout_map_file is not None:
+        local_layout_map = json.loads(await layout_map_file.read())
+    elif layout_map:
+        local_layout_map = layout_map
+
+    def _get_layout(name, need_body):
+        return get_layout_by_default(prs, name, need_body) if not local_layout_map else get_layout_by_default(prs, name, need_body)
+
+    title_layout = _get_layout("Title Slide", need_body=False)
+    content_layout = _get_layout("Title and Content", need_body=True)
 
     for idx, slide_data in enumerate(outline.get("slides", [])):
         layout = title_layout if idx == 0 else content_layout
@@ -184,4 +248,11 @@ async def generate_pptx(req: PPTXRequest):
     prs.save(buf)
     buf.seek(0)
 
-    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", headers={"Content-Disposition": "attachment; filename=outline.pptx"})
+    response = StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", headers={"Content-Disposition": "attachment; filename=outline.pptx"})
+    # After streaming ensure temp files removed
+    for p in cleanup_files:
+        try:
+            p.unlink(missing_ok=True)
+        except Exception:
+            pass
+    return response

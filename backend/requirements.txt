@@ -6,3 +6,4 @@ readability-lxml
 markdownify
 openai
 python-pptx
+python-multipart
