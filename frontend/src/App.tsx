@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import UrlInput from './components/UrlInput';
 import ArticleViewer from './components/ArticleViewer';
+import logo from '../../assets/logo/notare-logo.png';
 
 function App() {
   const [html, setHtml] = useState('');
@@ -34,6 +35,7 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col items-center p-6">
+      <img src={logo} alt="Notāre logo" className="w-24 mb-2" />
       <h1 className="text-3xl font-bold mb-4">Notāre</h1>
       <UrlInput onLoaded={setHtml} />
       {html && (

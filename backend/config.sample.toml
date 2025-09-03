@@ -1,5 +1,7 @@
 # Notāre configuration sample
 
+template_dir = "assets/ppt_templates"
+
 [llm]
 # Choose provider: "openai" or "llama"
 provider = "openai"
