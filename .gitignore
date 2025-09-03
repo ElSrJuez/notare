@@ -14,7 +14,7 @@ node_modules/
 Thumbs.db
 
 # Ignore project config file
-backend/config.toml
+backend/config.toml*
 
 # PPT Templates
 # Ignore binary template files but keep helper & mapping
