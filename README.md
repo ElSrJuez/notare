@@ -12,6 +12,7 @@ A calm, minimal workspace that lets readers distill knowledge fast. Hover-magnif
 - Hover magnifier & one-click highlighter with smooth animations
 - Bring-Your-Own-Model architecture: swap local or cloud LLMs via config
 - Instant export to `.pptx` using the captured outline
+- Session-scoped custom template & layout selectors (no persistence across reloads)
 
 ## Tech at a Glance
 Frontend (React + Tailwind + Framer Motion) renders the document viewer and interactions. Backend (FastAPI/Node) handles extraction, LLM orchestration, and PowerPoint generation. Shared types/utilities keep the stack DRY and maintainable.
@@ -19,7 +20,7 @@ Frontend (React + Tailwind + Framer Motion) renders the document viewer and inte
 ## Development Principles
 Simplicity and Maintainability guide every module. We practice small-module Separation of Concerns, DRY, and leverage existing libraries rather than reinventing the wheel.
 
-[➡️ Quick HOW-TO »](./HOWTO.md) | [📋 TODO & Roadmap »](./TODO.md)
+[➡️ Quick HOW-TO »](./HOWTO.md) | [📋 TODO & Roadmap »](./TODO.md) | [🚀 Deployment Guide »](./DEPLOYMENT.md)
 
 ---
 
@@ -40,6 +41,15 @@ Simplicity and Maintainability guide every module. We practice small-module Sepa
 | Slides     | python-pptx                  | Uses optional template + layout mapping |
 
 ---
+
+## Deployment
+- Containerized with Docker and deployable to Google Cloud Run (stateless).
+- See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
+
+## Current Status & Investments
+- Session-only file inputs implemented; full persistence deferred to restore-feature roadmap.
+- Core settings (provider, API key, model, endpoint) persisted via localStorage when ‘Remember’ is checked.
+- Deployed proof-of-concept on GCP Cloud Run.
 
 ## Workflow
 1. **Normalize** – Fetch article, strip boilerplate, render clean reading mode.

@@ -19,6 +19,10 @@
 
 4. LLM-driven outline endpoint (backend `/outline`) – IMPLEMENTING.
 
++### Session-scoped file inputs
++- Template and layout selectors reset on reload (no persistent handle).
++- Plan: add explicit restore via File System Access API.
+
 - Persist highlighted sentences to backend for optional cross-device storage.
 - Dark-mode theme support.
 - Unit tests for React components and FastAPI routes.
