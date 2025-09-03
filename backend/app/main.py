@@ -11,7 +11,7 @@ import os, io, json
 import openai
 from pptx import Presentation
 from pptx.util import Inches, Pt
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from .llm_provider import OpenAIProvider, LlamaHTTPProvider, BaseProvider, OutlineError
 from pathlib import Path
 from .config import load_config
@@ -163,6 +163,9 @@ async def healthz():
 
 @app.get("/")
 async def root():
+    index_path = _frontend_path / "index.html" if ' _frontend_path' in globals() else None
+    if index_path and index_path.exists():
+        return FileResponse(index_path)
     return {"ok": True}
 
 @app.post("/pptx")
