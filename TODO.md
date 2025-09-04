@@ -34,6 +34,7 @@ Sign-in is only to persist user templates & history; core features remain anonym
   - Two-column content  
   - Outro / Q-A slide  
 • Heuristic + GPT prompt to map outline items → suitable template layouts.
+• Generate Speaker Notes: insert concise, relevant text from the original article (per-slide context block) into the PPTX speaker-notes pane.
 
 ### 4. Export & Import
 • Additional export formats: annotated HTML and Markdown.  
