@@ -19,6 +19,7 @@
 • Favicon / PWA icon bundle (dark + light variants).  
 • Switch logo image to dark version when site is in light mode (prefers-color-scheme detection).  
 • Dark-mode theme polish.
+• Interactive product tour / onboarding walkthrough (e.g., Shepherd.js): guide user through URL input → highlight → Settings → template upload → generate & download.
 
 ### 2. Authentication
 Integrated IdP sign-in (optional):  
