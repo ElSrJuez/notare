@@ -328,3 +328,15 @@ async def validate_only(
 _frontend_path = _Path(__file__).resolve().parents[2] / "frontend" / "dist"
 if _frontend_path.exists():
     app.mount("/", StaticFiles(directory=str(_frontend_path), html=True), name="frontend")
+
+# Global "noindex" directive for all responses to deter crawlers
+@app.middleware("http")
+async def add_noindex_header(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Robots-Tag"] = "noindex, nofollow, nosnippet"
+    return response
+
+# robots.txt route – disallow everything
+@app.get("/robots.txt", include_in_schema=False)
+async def robots():
+    return StreamingResponse(iter([b"User-agent: *\nDisallow: /\n"]), media_type="text/plain")
