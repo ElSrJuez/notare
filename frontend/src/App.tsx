@@ -14,8 +14,8 @@ function App() {
   const [toast, setToast] = useState<{msg:string,type:'info'|'error'|'success'}|null>(null);
   const stored = localStorage.getItem(LS_KEY);
   const defaultSettings: Settings = stored
-    ? { template: null, layoutMap: null, ...JSON.parse(stored) }
-    : { provider: 'openai', api_key: '', model: 'gpt-4o-chat-bison', endpoint: '', api_version: '', template: null, templateName: undefined, layoutMap: null, layoutName: undefined, remember: false };
+    ? { template: null, ...JSON.parse(stored) }
+    : { provider: 'openai', api_key: '', model: 'gpt-4o-chat-bison', endpoint: '', api_version: '', template: null, templateName: undefined, remember: false };
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -44,10 +44,6 @@ function App() {
         console.log('[PPTX] Attaching template', settings.template.name, settings.template.size);
         fd.append('template', settings.template);
       }
-      if (settings.layoutMap) {
-        console.log('[PPTX] Attaching layout_map', settings.layoutMap.name, settings.layoutMap.size);
-        fd.append('layout_map', settings.layoutMap);
-      }
       fd.append('html', annotatedHtml);
 
       console.log('[Checkpoint2] FormData before send');
@@ -58,11 +54,29 @@ function App() {
         method: 'POST',
         body: fd,
       });
+      let diagMsg:string|undefined;
+      const diagHeader = res.headers.get('X-Notare-Template-Diagnostics');
+      console.log('[PPTX] Diagnostics header raw:', diagHeader);
+      if (diagHeader) {
+        const parts = diagHeader.split(' | ');
+        const warn = parts.filter(p=>p.startsWith('WARN')||p.startsWith('ERR'));
+        const ok = parts.filter(p=>p.startsWith('OK'));
+        if (warn.length){
+          diagMsg='Template warnings: '+warn.map(p=>p.slice(p.indexOf(':')+1)).join(' | ');
+        } else if (ok.length){
+          diagMsg='Template layouts used: '+ok.map(p=>p.slice(p.indexOf(':')+1)).join(', ');
+        }
+      }
       console.log('[PPTX] Response status', res.status);
       if (!res.ok) {
         console.error('[PPTX] Error', await res.text());
         push('Backend error while generating PPTX','error');
         throw new Error('PPTX generation failed');
+      }
+      if(diagMsg){
+        push(diagMsg,'info');
+      } else if (settings.template){
+        push('Template file processed.','info');
       }
       push('PPTX generated – downloading…','success');
       const blob = await res.blob();
@@ -83,7 +97,7 @@ function App() {
     setSettings(newSet);
     if (newSet.remember) {
       // exclude file-related fields so they aren’t falsely persisted
-      const { template, layoutMap, templateName, layoutName, ...persistable } = newSet;
+      const { template, templateName, ...persistable } = newSet;
       localStorage.setItem(LS_KEY, JSON.stringify(persistable));
     } else {
       localStorage.removeItem(LS_KEY);

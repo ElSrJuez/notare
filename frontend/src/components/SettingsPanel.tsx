@@ -7,8 +7,6 @@ export interface Settings {
   endpoint?: string;
   template?: File | null;
   templateName?: string;
-  layoutMap?: File | null;
-  layoutName?: string;
   remember: boolean;
   api_version?: string;
 }
@@ -26,10 +24,45 @@ export default function SettingsPanel({ initial, onSave, onClose }: Props) {
     setSettings(prev => ({ ...prev, [key]: value }));
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, key: 'template' | 'layoutMap') {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, key: 'template') {
     const f = e.target.files?.[0] ?? null;
     handleChange(key, f);
-    handleChange(key === 'template' ? 'templateName' : 'layoutName', f?.name || undefined as any);
+    handleChange('templateName', f?.name as any);
+
+    if (key === 'template' && f) {
+      // Validate template via backend
+      validateTemplate(f);
+    } else if (key === 'template' && !f) {
+      setTemplateDiag(null);
+    }
+  }
+
+  // ---------------- Template diagnostics ----------------
+
+  interface TemplateDiag {
+    summary: 'ok' | 'warning' | 'error';
+    diagnostics: { layout: string; status: string; message: string }[];
+  }
+
+  const [templateDiag, setTemplateDiag] = useState<TemplateDiag | null>(null);
+
+  async function validateTemplate(file: File) {
+    const fd = new FormData();
+    fd.append('template', file);
+    try {
+      const res = await fetch('/template/validate', { method: 'POST', body: fd });
+      if (!res.ok) {
+        console.error('[Template] Validation failed', await res.text());
+        setTemplateDiag({ summary: 'error', diagnostics: [{ layout: 'Upload', status: 'error', message: 'Validation HTTP error' }] });
+        return;
+      }
+      const data = (await res.json()) as TemplateDiag;
+      setTemplateDiag(data);
+      console.log('[Template] Diagnostics', data);
+    } catch (err) {
+      console.error('[Template] Network error', err);
+      setTemplateDiag({ summary: 'error', diagnostics: [{ layout: 'Upload', status: 'error', message: 'Network error' }] });
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -121,16 +154,40 @@ export default function SettingsPanel({ initial, onSave, onClose }: Props) {
         />
         {settings.template && <div className="text-sm font-medium text-green-700 mb-3">✔ {settings.template.name}</div>}
 
-        {/* layout */}
-        <label className="text-sm font-medium">Layout map (.json)</label>
-        <input
-          type="file"
-          accept="application/json"
-          onChange={e => handleFileChange(e, 'layoutMap')}
-          className="mb-1 w-full"
-        />
-        {settings.layoutMap && (
-          <div className="text-sm font-medium text-green-700 mb-3">✔ {settings.layoutMap.name}</div>
+        {/* diagnostics */}
+        {templateDiag && (
+          <div className="mb-4 border rounded p-2 text-sm">
+            <div className="font-medium mb-1">
+              Template check:{' '}
+              <span
+                className={
+                  templateDiag.summary === 'ok'
+                    ? 'text-green-700'
+                    : templateDiag.summary === 'warning'
+                    ? 'text-amber-600'
+                    : 'text-red-600'
+                }
+              >
+                {templateDiag.summary}
+              </span>
+            </div>
+            <ul className="list-disc ml-4 space-y-0.5">
+              {templateDiag.diagnostics.map((d, i) => (
+                <li
+                  key={i}
+                  className={
+                    d.status === 'ok'
+                      ? 'text-green-700'
+                      : d.status === 'warning'
+                      ? 'text-amber-600'
+                      : 'text-red-600'
+                  }
+                >
+                  <strong>{d.layout}:</strong> {d.message}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {/* remember */}

@@ -19,6 +19,13 @@ import tempfile  # added
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path as _Path
 
+# ---------------------------------------------------------------------------
+# Default layout names (internal use)
+# ---------------------------------------------------------------------------
+
+_TITLE_LAYOUT_NAME: str = "Title Slide"
+_CONTENT_LAYOUT_NAME: str = "Title and Content"
+
 app = FastAPI(title="Notāre Backend")
 cfg = load_config()
 
@@ -33,6 +40,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Notare-Template-Diagnostics"],
 )
 
 class NormalizeRequest(BaseModel):
@@ -90,52 +98,52 @@ async def outline(req: OutlineRequest):
 class PPTXRequest(BaseModel):
     html: str
 
-# Resolve template directory (checks root, [llm], [llm.openai])
-raw_dir = cfg.get("template_dir") or cfg.get("llm", {}).get("template_dir") or cfg.get("llm", {}).get("openai", {}).get("template_dir")
-if raw_dir:
-    path_obj = Path(raw_dir).expanduser()
-    if not path_obj.is_absolute():
-        repo_root = Path(__file__).resolve().parents[2]
-        template_dir = (repo_root / path_obj).resolve()
+def validate_template(prs):
+    """Return structured diagnostics for required layouts and placeholders.
+
+    Output Example::
+        [
+            {"layout": "Title Slide", "status": "error", "message": "Layout not found"},
+            {"layout": "Title and Content", "status": "warning", "message": "Missing BODY placeholder"}
+        ]
+    """
+
+    diagnostics: list[dict] = []
+
+    def append(layout: str, status: str, message: str):
+        diagnostics.append({"layout": layout, "status": status, "message": message})
+
+    def get_plh_types(layout):
+        return {ph.placeholder_format.type for ph in layout.placeholders}
+
+    # --- Title Slide ---
+    title_slide = next((l for l in prs.slide_layouts if l.name == _TITLE_LAYOUT_NAME), None)
+    if not title_slide:
+        append("Title Slide", "error", "Layout not found")
     else:
-        template_dir = path_obj
-    logger.info("Template directory resolved to %s", template_dir)
-else:
-    template_dir = None
-    logger.info("No template_dir configured; will build presentation from scratch")
+        types = get_plh_types(title_slide)
+        if 1 not in types:  # 1 == TITLE
+            append("Title Slide", "warning", "TITLE placeholder missing")
+        else:
+            append("Title Slide", "ok", "Layout present with TITLE placeholder")
 
+    # --- Title and Content ---
+    title_content = next((l for l in prs.slide_layouts if l.name == _CONTENT_LAYOUT_NAME), None)
+    if not title_content:
+        append("Title and Content", "error", "Layout not found")
+    else:
+        types = get_plh_types(title_content)
+        missing: list[str] = []
+        if 1 not in types:
+            missing.append("TITLE")
+        if 2 not in types:  # 2 == BODY
+            missing.append("BODY")
+        if missing:
+            append("Title and Content", "warning", f"Missing placeholder(s): {', '.join(missing)}")
+        else:
+            append("Title and Content", "ok", "Layout present with TITLE and BODY placeholders")
 
-def load_template():
-    if not template_dir:
-        return None
-    for f in template_dir.glob("*.pptx"):
-        logger.info("Using PPTX template: %s", f)
-        return Presentation(str(f))
-    logger.info("No PPTX template found in %s; using default presentation", template_dir)
-    return None
-
-layout_map = {}
-if template_dir:
-    map_file = template_dir / "layout_map.json"
-    if map_file.exists():
-        layout_map = json.loads(map_file.read_text())
-        logger.info("Loaded layout map with %d entries", len(layout_map))
-
-
-def get_layout_by_default(prs, default_name, need_body):
-    # mapped name first
-    mapped = layout_map.get(default_name)
-    if mapped:
-        for l in prs.slide_layouts:
-            if l.name == mapped:
-                return l
-    # fallback search
-    for l in prs.slide_layouts:
-        if default_name.lower() in l.name.lower():
-            return l
-    # ultimate fallback
-    return prs.slide_layouts[0]
-
+    return diagnostics
 
 class SettingsPayload(BaseModel):
     provider: str = "openai"
@@ -171,7 +179,7 @@ async def generate_pptx(
     settings: Annotated[str, Form(...)],
     html: Annotated[str, Form(..., description="Annotated HTML from client")],
     template: Annotated[UploadFile | None, File(description="Optional PPTX template", alias="template")] = None,
-    layout_map_file: Annotated[UploadFile | None, File(description="Optional JSON layout map", alias="layout_map")] = None,
+    # layout_map upload field removed (legacy)
 ):
     """Generate a PPTX from annotated HTML via LLM outline.
 
@@ -209,22 +217,17 @@ async def generate_pptx(
         prs_template = Presentation(str(tmp_path))
         cleanup_files.append(tmp_path)
     else:
-        prs_template = load_template()
+        prs_template = Presentation()
 
-    prs = prs_template or Presentation()
+    prs = prs_template
+    diagnostics = validate_template(prs)
+    logger.info("Template diagnostics: %s", diagnostics)
 
-    # If a custom layout_map was supplied use it; else fall back to configured one.
-    local_layout_map: dict = {}
-    if layout_map_file is not None:
-        local_layout_map = json.loads(await layout_map_file.read())
-    elif layout_map:
-        local_layout_map = layout_map
+    def get_layout(name:str, fallback_idx:int):
+        return next((l for l in prs.slide_layouts if l.name == name), prs.slide_layouts[fallback_idx])
 
-    def _get_layout(name, need_body):
-        return get_layout_by_default(prs, name, need_body) if not local_layout_map else get_layout_by_default(prs, name, need_body)
-
-    title_layout = _get_layout("Title Slide", need_body=False)
-    content_layout = _get_layout("Title and Content", need_body=True)
+    title_layout   = get_layout(_TITLE_LAYOUT_NAME, 0)
+    content_layout = get_layout(_CONTENT_LAYOUT_NAME, 1)
 
     for idx, slide_data in enumerate(outline.get("slides", [])):
         layout = title_layout if idx == 0 else content_layout
@@ -255,7 +258,17 @@ async def generate_pptx(
     prs.save(buf)
     buf.seek(0)
 
-    response = StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation", headers={"Content-Disposition": "attachment; filename=outline.pptx"})
+    response = StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": "attachment; filename=outline.pptx"}
+    )
+    # Legacy flat header for backward compatibility (semicolon delimited key=value)
+    def header_token(d: dict[str, str]):
+        return f"{d['layout']}={d['status']}"
+
+    header_val = "|".join(header_token(d) for d in diagnostics)
+    response.headers["X-Notare-Template-Diagnostics"] = header_val
     # After streaming ensure temp files removed
     for p in cleanup_files:
         try:
@@ -263,6 +276,53 @@ async def generate_pptx(
         except Exception:
             pass
     return response
+
+# ---------------------------------------------------------------------------
+# Template-only validation endpoint (no PPTX generation)
+# ---------------------------------------------------------------------------
+
+@app.post("/template/validate")
+async def validate_only(
+    template: Annotated[UploadFile | None, File(description="PPTX template", alias="template")] = None,
+):
+    """Validate a PPTX template and return structured diagnostics.
+
+    This endpoint allows the frontend to upload a template, get precise
+    validation feedback, and decide whether to continue with slide generation.
+    """
+
+    # Load presentation – from uploaded file or configured template directory
+    prs: Presentation | None = None
+    cleanup_path: Path | None = None
+
+    if template is not None:
+        if template.size and template.size > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Template too large (limit 5 MiB)")
+
+        tmp_path = Path(tempfile.gettempdir()) / f"notare_validate_{template.filename}"
+        with tmp_path.open("wb") as f:
+            f.write(await template.read())
+        prs = Presentation(str(tmp_path))
+        cleanup_path = tmp_path
+    else:
+        prs = Presentation()
+
+    diagnostics = validate_template(prs)
+
+    # Determine overall state
+    has_error = any(d["status"] == "error" for d in diagnostics)
+    has_warning = any(d["status"] == "warning" for d in diagnostics)
+
+    summary = "error" if has_error else "warning" if has_warning else "ok"
+
+    # Clean up temp file
+    if cleanup_path:
+        try:
+            cleanup_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    return {"summary": summary, "diagnostics": diagnostics}
 
 # Mount frontend build (if present) as static site
 _frontend_path = _Path(__file__).resolve().parents[2] / "frontend" / "dist"

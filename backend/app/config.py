@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, Dict
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.toml"
-SAMPLE_PATH = Path(__file__).resolve().parent.parent / "config.sample.toml"
 
 
 def load_config() -> Dict[str, Any]:
@@ -20,6 +19,4 @@ def load_config() -> Dict[str, Any]:
     if CONFIG_PATH.exists():
         with CONFIG_PATH.open("rb") as f:
             return tomllib.load(f)
-    # If sample exists we are likely in local dev – still do not crash, just
-    # inform the caller that defaults will be used.
     return {}
