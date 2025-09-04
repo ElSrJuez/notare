@@ -50,3 +50,4 @@ Sign-in is only to persist user templates & history; core features remain anonym
 • Bundle `frontend/dist` into backend for single-origin deployment.  
 • Aggressive/cautious request throttling tiers for free workloads (protect Cloud Run & Vercel quotas).  
 • Full security review: dependency scanning, SSRF/SSTI checks, auth flows, file-upload validation, threat-vector matrix.
+• **Top priority:** add strong anti-scraping / no-index measures (robots.txt `Disallow: /`, `<meta name="robots" content="noindex,nofollow">`, rate-limit headers) to avoid paying for crawler traffic.
