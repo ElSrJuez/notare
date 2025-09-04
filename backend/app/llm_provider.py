@@ -12,14 +12,10 @@ import re
 import httpx
 from pydantic import BaseModel, Field
 
-from .config import load_config
-
 try:
     import openai  # Optional dependency
 except ImportError:  # pragma: no cover
     openai = None  # type: ignore
-
-cfg = load_config()
 
 logger = logging.getLogger("notare.llm")
 logger.setLevel(logging.INFO)
@@ -137,15 +133,11 @@ class OutlineModel(BaseModel):
     slides: List[Slide]
 
 
-def get_provider() -> BaseProvider:
-    llm_cfg = cfg.get("llm", {})
-    provider_name = llm_cfg.get("provider", "openai").lower()
-    if provider_name == "openai":
-        openai_cfg = llm_cfg.get("openai", {})
-        return OpenAIProvider(openai_cfg)
-    if provider_name == "llama":
-        llama_cfg = llm_cfg.get("llama", {})
-        endpoint = llama_cfg.get("endpoint", "http://localhost:8080/completions")
-        model = llama_cfg.get("model")
-        return LlamaHTTPProvider(endpoint, model)
-    raise RuntimeError(f"Unknown LLM provider '{provider_name}' in config")
+# Helper retained for unit tests; caller must pass full config.
+def get_provider(cfg: dict) -> BaseProvider:  # pragma: no cover
+    name = cfg.get("provider", "openai").lower()
+    if name == "openai":
+        return OpenAIProvider(cfg)
+    if name == "llama":
+        return LlamaHTTPProvider(cfg.get("endpoint", "http://localhost:8080/completions"), cfg.get("model"))
+    raise RuntimeError(f"Unknown provider '{name}'")

@@ -14,7 +14,6 @@ from pptx.util import Inches, Pt
 from fastapi.responses import StreamingResponse, FileResponse
 from .llm_provider import OpenAIProvider, LlamaHTTPProvider, BaseProvider, OutlineError
 from pathlib import Path
-from .config import load_config
 import tempfile  # added
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path as _Path
@@ -27,7 +26,6 @@ _TITLE_LAYOUT_NAME: str = "Title Slide"
 _CONTENT_LAYOUT_NAME: str = "Title and Content"
 
 app = FastAPI(title="Notāre Backend")
-cfg = load_config()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -159,7 +157,9 @@ class SettingsPayload(BaseModel):
                 raise HTTPException(status_code=400, detail="api_key required for OpenAI/Azure provider")
             if name == "azure" and not self.endpoint:
                 raise HTTPException(status_code=400, detail="endpoint required for Azure provider")
-            return OpenAIProvider({"api_key": self.api_key, "model": self.model or "gpt-4o-chat-bison", "endpoint": self.endpoint, "api_version": self.api_version})
+            if not self.model:
+                raise HTTPException(status_code=400, detail="model required for OpenAI/Azure provider")
+            return OpenAIProvider({"api_key": self.api_key, "model": self.model, "endpoint": self.endpoint, "api_version": self.api_version})
         if name == "llama":
             return LlamaHTTPProvider(base_url=self.endpoint or "http://localhost:8080/completions", model=self.model)
         raise HTTPException(status_code=400, detail=f"Unsupported provider '{self.provider}'")
