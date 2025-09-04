@@ -1,34 +1,52 @@
 # TODO
 
-## Known Issues
+## Known Issues (v1.0)
 
-1.1 Links still appear bold instead of underlined in article viewer.
-1.2 Hover-magnify occasionally shifts layout on narrow screens.
+1. Reader polish
+   - Links are styled as **bold** instead of _underlined_.
+   - Hover-magnify can nudge layout on mobile widths.
 
-- Sentence detection fails for quotes containing ellipsis (`…`).
-- Highlight bar misaligned when paragraph contains inline code elements.
-- CSS `@apply` rules trigger postcss warnings during build.
-- Backend `/normalize` endpoint lacks comprehensive error handling for malformed URLs.
-- No visual feedback while article is loading.
+2. Highlight edge-cases
+   - Sentences with `…` or nested `<code>` break detection → misaligned highlight bar.
 
-## Planned Improvements
+3. Build warnings – Tailwind `@apply` noise during `npm run build`.
 
-3. Export options
-   - Download annotated HTML.
-   - PPTX and Markdown export.
+4. UX – missing progress indicator while Normalize fetch is in flight.
 
-4. LLM-driven outline endpoint (backend `/outline`) – IMPLEMENTING.
+## Roadmap
 
-+### Session-scoped file inputs
-+- Template and layout selectors reset on reload (no persistent handle).
-+- Plan: add explicit restore via File System Access API.
+### 1. Visual & UX
+• Favicon / PWA icon bundle (dark + light variants).  
+• Switch logo image to dark version when site is in light mode (prefers-color-scheme detection).  
+• Dark-mode theme polish.
 
-- Persist highlighted sentences to backend for optional cross-device storage.
-- Dark-mode theme support.
-- Unit tests for React components and FastAPI routes.
-- Accessibility audit: ensure proper ARIA roles and color contrast.
-- Implement user-moderation prompt that merges outline with source context before final generation.
-- Allow users to upload, manage, and normalize custom PPT templates via UI & backend endpoint.
-- Treat highlighted ‘central’ sentences/phrases as slide section dividers with auto numbering based on mapped layout.
-- Implement local/session-based storage for templates, outlines, and user profiles; backend remains stateless.
-- Build UI for users to configure their LLM credentials and settings (BYOM) and persist them locally.
+### 2. Authentication
+Integrated IdP sign-in (optional):  
+  - Microsoft Account / Entra ID  
+  - Google + Google Workspace  
+  - GitHub  
+Sign-in is only to persist user templates & history; core features remain anonymous.
+
+### 3. PowerPoint Generation
+• Smart layout selection:   
+  - Section separators  
+  - Two-column content  
+  - Outro / Q-A slide  
+• Heuristic + GPT prompt to map outline items → suitable template layouts.
+
+### 4. Export & Import
+• Additional export formats: annotated HTML and Markdown.  
+• Import `.docx` or raw Markdown as alternate content sources.
+
+### 5. Prompt Engineering & Persistence
+• Clean separation of **system**, **meta**, and **user** prompts in backend provider layer.  
+• Move hard-coded prompt strings into versioned JSON/YAML “prompt cards”.  
+• Admin endpoint to list / preview / update prompt cards without redeploying.  
+• Persist per-user preferred prompt card + LLM settings once IdP sign-in is available.
+
+### 6. Quality & Ops
+• Unit tests for React components and FastAPI routes (pytest + React Testing Library).  
+• Lighthouse & axe accessibility audits.  
+• Bundle `frontend/dist` into backend for single-origin deployment.  
+• Aggressive/cautious request throttling tiers for free workloads (protect Cloud Run & Vercel quotas).  
+• Full security review: dependency scanning, SSRF/SSTI checks, auth flows, file-upload validation, threat-vector matrix.
