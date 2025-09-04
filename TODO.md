@@ -36,6 +36,20 @@ Sign-in is only to persist user templates & history; core features remain anonym
 • Heuristic + GPT prompt to map outline items → suitable template layouts.
 • Generate Speaker Notes: insert concise, relevant text from the original article (per-slide context block) into the PPTX speaker-notes pane.
 
+### 3a. Iterative Slide Enhancement
+• After initial outline → bullets step, run a second LLM pass per-slide that extracts a brief narrative paragraph from the source article.  
+• Paragraph must complement, not repeat, existing bullets—acts as a rich intro on the slide canvas (or as a subtitle field).  
+• UI toggle to enable/disable this enhancement (default on).
+• Again: leverages the richness of the original document and highlights stuff not already mentioned in the bullets
+
+### 3b. Iterative Speaker Notes
+* Generate Speaker Notes: insert concise, relevant text from the original article (per-slide Speaker Notes) into the PPTX speaker-notes pane.
+#### Hints Notes Section
+* First brief Hints section: "to say the same thing in a different way"
+* Mentions non-repetitively things deemed of special value to highlight from the slide and slide intro
+#### Complement Notes Section
+* Second also brief Complement section: A way to collect remaining/residual article richness that was not already captured in the slide
+
 ### 4. Export & Import
 • Additional export formats: annotated HTML and Markdown.  
 • Import `.docx` or raw Markdown as alternate content sources.
