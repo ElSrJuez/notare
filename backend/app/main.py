@@ -48,7 +48,7 @@ class NormalizeRequest(BaseModel):
 async def normalize_page(req: NormalizeRequest):
     """Fetches the web page, strips boilerplate, and returns simplified HTML."""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             resp = await client.get(str(req.url), timeout=10)
             resp.raise_for_status()
     except Exception as e:
