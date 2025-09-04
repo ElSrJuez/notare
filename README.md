@@ -29,7 +29,7 @@ Simplicity and Maintainability guide every module. We practice small-module Sepa
 - **Beautiful minimalism** – clean typography, restrained colours, generous whitespace.
 - **Respect structure** – preserve heading hierarchy during normalization.
 - **Fluid interaction** – highlighting and magnification feel organic and smooth.
-- **BYOM friendly** – Large-Language-Model integration sits behind a clean abstraction layer.
+- **BYOM friendly** – Large-Language-Model integration sits behind a clean abstraction layer. All credentials are supplied at runtime via the Settings side-panel; the backend remains stateless.
 
 ## Architecture at a Glance
 | Layer      | Stack                         | Notes                                   |
@@ -37,8 +37,8 @@ Simplicity and Maintainability guide every module. We practice small-module Sepa
 | Frontend   | React + Vite + Tailwind CSS  | Reader, highlighter, export trigger     |
 | Animation  | Framer Motion                | Hover magnifier & highlight effects     |
 | Backend    | FastAPI (Python)             | Extraction, LLM calls, PPTX generation  |
-| LLM        | OpenAI / Azure / Llama.cpp   | Configure in `backend/app/config.toml`  |
-| Slides     | python-pptx                  | Uses optional template + layout mapping |
+| LLM        | OpenAI / Azure / Llama.cpp   | Runtime settings via GUI (no server-side config) |
+| Slides     | python-pptx                  | Uses optional uploaded template (auto-validated) |
 
 ---
 
@@ -47,12 +47,12 @@ Simplicity and Maintainability guide every module. We practice small-module Sepa
 - See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.
 
 ## Current Status & Investments
-- Session-only file inputs implemented; full persistence deferred to restore-feature roadmap.
+- Session-only file inputs implemented. User can optionally store LLM settings in localStorage via “Remember”.
 - Core settings (provider, API key, model, endpoint) persisted via localStorage when ‘Remember’ is checked.
 - Deployed proof-of-concept on GCP Cloud Run.
 
 ## Workflow
 1. **Normalize** – Fetch article, strip boilerplate, render clean reading mode.
 2. **Highlight** – Hover magnify, click to mark key phrases (`<<mark>>`).
-3. **Outline** – Backend passes annotated markdown to your LLM, which returns JSON.
-4. **Export** – JSON outline → python-pptx, applied to your template → download.
+3. **Outline** – Backend passes annotated markdown + user-supplied LLM settings to the provider; receives JSON.
+4. **Export** – JSON outline → python-pptx, optionally using the uploaded template → download.

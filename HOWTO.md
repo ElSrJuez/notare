@@ -51,42 +51,20 @@ Copy `dist/` to a `static/` folder and mount with FastAPI for single-origin depl
 
 ---
 
-## 7. Configure your Large Language Model (LLM)
-Notāre is **BYOM** (Bring-Your-Own-Model). Edit `backend/app/config.toml`:
+## 7. Provide LLM credentials at runtime
+Click the ⚙️ Settings button in the UI and fill in:
 
-```toml
-[llm]
-provider = "openai"          # or "llama"
+* Provider (`openai`, `azure`, or `llama`)
+* API Key / Endpoint / Model / API Version as required
 
-[llm.openai]
-api_key = "sk-..."          # required
-model   = "gpt-4o-chat-bison"
-# endpoint / api_version if using Azure OpenAI
-```
-
-For a local llama.cpp HTTP server:
-```toml
-[llm]
-provider = "llama"
-
-[llm.llama]
-endpoint = "http://localhost:8080/completions"
-model    = "phi2.Q4_K_M.gguf"  # optional
-```
+Tick “Remember” to store them in `localStorage` for the next visit. No server-side configuration is needed.
 
 ---
 
-## 8. Use a custom PowerPoint template (optional but recommended)
-1. Place **one** `.pptx` file in `assets/ppt_templates/`.
-2. From that folder run the mapping helper:
+## 8. Use a custom PowerPoint template (optional)
+Click “Choose File” in Settings and upload any `.pptx`. The backend validates it instantly and shows green/orange/red diagnostics.
 
-```pwsh
-cd assets/ppt_templates
-python layout_helper.py
-```
-The script shows all layouts and asks you to map Notāre’s default slide types (Title Slide, Title and Content, etc.) to your template. It writes `layout_map.json` used by the backend.
-
-> If bullets don’t appear in generated slides, ensure the mapped layout contains a **body/content** placeholder. You can add one in PowerPoint → View → Slide Master → Insert Placeholder → Text.
+If the “Title Slide” or “Title and Content” layouts lack the necessary placeholders, open Slide Master in PowerPoint and add them (Insert → Placeholder).
 
 ---
 
@@ -107,7 +85,7 @@ The updated system prompt tells the model to **use the emphasis but strip the de
 | Titles show, body text missing | The mapped layout lacks a BODY/CONTENT placeholder. Edit Slide Master or re-run `layout_helper.py` and choose a layout that contains one. |
 | `<<mark>>` appears in slides | Pull latest code (≥ 2025-09-02) with new prompt & post-filter. |
 | 400 error from `/outline` | Wrong LLM credentials/model name in `config.toml`. |
-| Template ignored (default theme) | No `.pptx` found in `assets/ppt_templates` or `template_dir` mis-configured. |
+| Template ignored (default theme) | No template uploaded. |
 | Frontend cannot reach API | Ensure FastAPI is running on port 8000 or adjust proxy in `frontend/vite.config.ts`. |
 
 ---

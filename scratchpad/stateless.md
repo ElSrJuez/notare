@@ -9,35 +9,29 @@ The backend holds no secrets or user data; all user-specific settings (LLM key, 
 
 | Area | Behaviour | Risk |
 |------|-----------|------|
-| `backend/config.toml` | Local demo file, **ignored by git**, missing in container → crash. | ❌ Must be optional. |
-| PPT template (`assets/ppt_templates/Template.pptx`) | Local, git-ignored. | ❌ Must be optional upload. |
-| Highlights / outlines | Held client-side only. | ✅ already stateless |
-| Secrets | Hard-coded in dev `config.toml`. | ❌ Remove from image |
+| LLM credentials | Sent per-request from browser; never persisted server-side. | ✅ already stateless |
+| Secrets | Provided in Settings panel and stored only in `localStorage` when user opts-in. | ✅ not in image |
 
 ---
 
 ## 2  Task Breakdown
 
 ### 2.1 Backend (FastAPI)
-1. **Config Loader** (`backend/app/config.py`)
-   * If `config.toml` present → load (local dev).
-   * Else read `OPENAI_API_KEY`, `OPENAI_MODEL`, `LLM_PROVIDER` env vars.
-   * Allow per-request override via dependency that inspects headers/JSON.
-2. **Request Model**  
+1. **Request Model**  
    `SettingsPayload` with `openai_key`, `openai_model`, `provider`.
-3. **Endpoints**
+2. **Endpoints**
    * Extend `/pptx` to accept multipart form:
      • field `settings` (JSON)  
      • file `template` (optional `.pptx`)  
      • file `layout_map` (optional `.json`)
    * Add `/healthz` → `{"ok":true}`.
-4. **Template Handling**
+3. **Template Handling**
    * Save uploads to `tempfile.TemporaryDirectory()`; delete after use.
    * Template upload **never persisted**: when “Remember” is on we store only `templateFileName` and `lastPath` (if available via File System Access API), not the binary.
-5. **Size & Security**
+4. **Size & Security**
    * Limit template upload ≤ 5 MiB.
 
-### 2.2 Frontend (React/Vite)
+### 2.2 Frontend (React/Vite) — v1.0 state
 
 #### GUI Concept – Settings Drawer
 ```
@@ -115,7 +109,7 @@ The backend holds no secrets or user data; all user-specific settings (LLM key, 
 - [ ] Unit tests: config loader path (file, env, header).  
 - [ ] Upload custom template → correct slide mapping.  
 - [ ] Cloud Run starts; `/healthz` returns 200.  
-- [ ] Image contains no `OPENAI_API_KEY` string (`docker run` + `grep`).
+- [ ] Image contains no secret strings (`docker run` + `grep`).
 
 ---
 
